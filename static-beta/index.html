@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ModMatch Auto — Beta</title>
+  <meta name="description" content="See it. Price it. Build it. Plan your vehicle build and track your budget with ModMatch Auto." />
+  <style>
+    :root{--bg:#05080d;--panel:#0b111a;--panel2:#101925;--line:#1c2a3a;--text:#f4f7fb;--muted:#8fa0b4;--blue:#49a7ff;--blue2:#1378d4;--green:#36d399;--danger:#ff6b6b}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% -10%,#102844 0,transparent 35%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}.wrap{max-width:1100px;margin:0 auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 20px;position:sticky;top:0;background:linear-gradient(180deg,rgba(5,8,13,.98) 70%,rgba(5,8,13,0));z-index:20}.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em}.mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#58b6ff,#0e5da7);display:grid;place-items:center;box-shadow:0 8px 28px rgba(34,139,230,.25)}.tag{font-size:12px;padding:6px 9px;border:1px solid #24476b;border-radius:999px;color:#9dceff;background:#0b1b2c}.hero{padding:50px 0 24px}.hero h1{font-size:clamp(42px,9vw,82px);line-height:.95;letter-spacing:-.055em;margin:0 0 18px;max-width:900px}.hero h1 span{color:var(--blue)}.hero p{max-width:670px;color:#b8c5d3;font-size:clamp(17px,2.5vw,21px);line-height:1.55}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btn{border:1px solid var(--line);background:#111a25;color:white;border-radius:12px;padding:12px 16px;font-weight:800}.btn.primary{background:linear-gradient(180deg,#2297ff,#0e72cd);border-color:#2a9cff}.btn.ghost{background:#0c121a}.btn.small{padding:9px 12px;font-size:13px}.btn.danger{color:#ffb2b2;border-color:#5a2a2a}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0}.card{background:linear-gradient(180deg,rgba(16,25,37,.96),rgba(8,13,20,.96));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 50px rgba(0,0,0,.16)}.card h3{margin:0 0 8px}.card p{color:var(--muted);line-height:1.5;margin:0}.notice{margin:14px 0;padding:12px 14px;border:1px solid #24476b;background:#0b1b2c;border-radius:12px;color:#b7dcff}.error{border-color:#612d34;background:#211014;color:#ffc0c0}.success{border-color:#1f5946;background:#0b2119;color:#bdf8dd}.auth{max-width:480px;margin:40px auto}.field{display:grid;gap:7px;margin:13px 0}.field label{font-size:12px;font-weight:800;color:#a8b8c9;letter-spacing:.05em}.field input,.field select,.field textarea{width:100%;border:1px solid #223246;background:#08101a;color:#fff;border-radius:11px;padding:12px 13px;outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:#3f9cf3}.nav{display:flex;gap:8px;overflow:auto;padding-bottom:6px}.nav button{white-space:nowrap}.sectionTitle{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:26px 0 12px}.sectionTitle h2{margin:0;font-size:28px;letter-spacing:-.035em}.muted{color:var(--muted)}.vehicle{display:flex;justify-content:space-between;gap:12px;align-items:center}.vehicle strong{font-size:18px}.catalog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.part{display:grid;gap:8px}.part .price{font-size:20px;font-weight:900}.chip{display:inline-flex;width:max-content;padding:5px 8px;border:1px solid #223246;border-radius:999px;color:#9bb4ce;font-size:11px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{padding:14px;border-radius:14px;background:#09111b;border:1px solid #1c2a3a}.stat b{display:block;font-size:22px;margin-top:5px}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #182433;padding:13px 0}.row:first-child{border-top:0}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:80;display:grid;place-items:center;padding:18px}.modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#0b111a;border:1px solid #25364a;border-radius:20px;padding:18px}.modalTop{display:flex;justify-content:space-between;gap:12px;align-items:center}.modalTop h2{margin:0}.x{border:1px solid #26364a;background:#101924;color:#fff;border-radius:10px;width:38px;height:38px}.feedback{position:fixed;right:16px;bottom:18px;z-index:50;border:1px solid #295f90;background:#0b2033;color:#cce8ff;border-radius:999px;padding:11px 14px;font-weight:850;box-shadow:0 12px 30px rgba(0,0,0,.35)}.footer{padding:45px 0 85px;color:#76889b;font-size:13px;line-height:1.55}.hidden{display:none!important}.empty{text-align:center;padding:28px;color:#8092a5}.betaBox{margin:22px 0;padding:16px;border:1px solid #5a4523;background:#20180b;border-radius:14px;color:#ffdb9a}.kicker{color:#70baff;font-size:12px;font-weight:900;letter-spacing:.13em}
+    @media(max-width:760px){.grid,.catalog,.summary{grid-template-columns:1fr}.hero{padding-top:28px}.wrap{padding:14px}.top{padding-top:4px}.vehicle{align-items:flex-start;flex-direction:column}.feedback{bottom:14px}.row{align-items:flex-start}.top .btn.small{padding:8px 10px}.brandText{font-size:15px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="mark">M</div><div class="brandText">ModMatch Auto</div><span class="tag">BETA</span></div>
+    <div id="topActions"><button class="btn small" id="loginTop">Sign in</button></div>
+  </header>
+
+  <main id="landing">
+    <section class="hero">
+      <div class="kicker">SEE IT. PRICE IT. BUILD IT.</div>
+      <h1>Your build, <span>planned right.</span></h1>
+      <p>Keep your cars, parts, install costs, and budget in one place. ModMatch Auto is an early beta built for enthusiasts, DIYers, and shops who want a clearer way to plan vehicle modifications.</p>
+      <div class="actions">
+        <button class="btn primary" id="startBtn">Start testing free</button>
+        <button class="btn ghost" id="signinBtn">I already have an account</button>
+      </div>
+      <div class="betaBox"><b>Public beta:</b> Fitment and pricing are planning references only. Always verify exact compatibility, specifications, and current pricing with the manufacturer, vendor, or installer before purchasing or installing a part.</div>
+    </section>
+    <section class="grid">
+      <div class="card"><h3>My Garage</h3><p>Save your vehicle year, make, model, trim, engine, and nickname.</p></div>
+      <div class="card"><h3>Find Mods</h3><p>Browse common modification categories and add parts to your build plan.</p></div>
+      <div class="card"><h3>Track the Budget</h3><p>See parts, install costs, total build cost, and what remains in your budget.</p></div>
+    </section>
+  </main>
+
+  <main id="authView" class="hidden">
+    <section class="card auth">
+      <div class="kicker">MODMATCH AUTO BETA</div>
+      <h2 id="authTitle">Create your account</h2>
+      <p class="muted" id="authSub">Start a garage and save your build.</p>
+      <div id="authMsg"></div>
+      <form id="authForm">
+        <div class="field"><label>EMAIL</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+        <div class="field"><label>PASSWORD</label><input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></div>
+        <button class="btn primary" style="width:100%" id="authSubmit">Create account</button>
+      </form>
+      <div class="actions"><button class="btn ghost small" id="toggleAuth">Already have an account? Sign in</button><button class="btn ghost small" id="backHome">Back</button></div>
+    </section>
+  </main>
+
+  <main id="appView" class="hidden">
+    <div class="nav">
+      <button class="btn primary small" data-view="garage">My Garage</button>
+      <button class="btn small" data-view="mods">Find Mods</button>
+      <button class="btn small" data-view="build">My Build</button>
+    </div>
+    <div id="appMsg"></div>
+
+    <section id="garageView">
+      <div class="sectionTitle"><div><div class="kicker">MY GARAGE</div><h2>Your vehicles</h2></div><button class="btn primary small" id="addVehicleBtn">+ Add vehicle</button></div>
+      <div id="vehicleList"></div>
+    </section>
+
+    <section id="modsView" class="hidden">
+      <div class="sectionTitle"><div><div class="kicker">FIND MODS</div><h2>Start planning</h2></div></div>
+      <p class="muted">Beta catalog. Add a part to your active vehicle build, then edit your plan as you compare real vendors and fitment.</p>
+      <div class="catalog" id="catalog"></div>
+    </section>
+
+    <section id="buildView" class="hidden">
+      <div class="sectionTitle"><div><div class="kicker">MY BUILD</div><h2 id="buildHeading">Build plan</h2></div></div>
+      <div id="buildSummary"></div>
+      <div class="card" style="margin-top:12px">
+        <form id="budgetForm" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+          <div class="field" style="flex:1;min-width:180px;margin:0"><label>BUILD BUDGET</label><input id="budgetInput" type="number" min="0" step="1" placeholder="5000"></div>
+          <button class="btn primary">Save budget</button>
+        </form>
+      </div>
+      <div class="card" style="margin-top:12px"><div id="buildItems"></div></div>
+    </section>
+  </main>
+
+  <footer class="footer">© 2026 ModMatch Auto. Beta software. ModMatch Auto does not guarantee vehicle fitment, installation safety, vendor availability, or live pricing. Verify parts before purchase and use qualified installation help where appropriate.</footer>
+</div>
+
+<button class="feedback" id="feedbackBtn">Give feedback</button>
+
+<div class="overlay hidden" id="vehicleModal">
+  <div class="modal">
+    <div class="modalTop"><div><div class="kicker">ADD TO GARAGE</div><h2>Add vehicle</h2></div><button class="x" data-close="vehicleModal">×</button></div>
+    <form id="vehicleForm">
+      <div class="field"><label>YEAR</label><input name="year" type="number" min="1886" max="2100" required placeholder="2020"></div>
+      <div class="field"><label>MAKE</label><input name="make" required placeholder="Mercedes-Benz"></div>
+      <div class="field"><label>MODEL</label><input name="model" required placeholder="E350"></div>
+      <div class="field"><label>TRIM</label><input name="trim" placeholder="Base"></div>
+      <div class="field"><label>ENGINE</label><input name="engine" placeholder="2.0L Turbo"></div>
+      <div class="field"><label>NICKNAME</label><input name="nickname" placeholder="Daily"></div>
+      <button class="btn primary" style="width:100%">Save vehicle</button>
+    </form>
+  </div>
+</div>
+
+<div class="overlay hidden" id="feedbackModal">
+  <div class="modal">
+    <div class="modalTop"><div><div class="kicker">BETA FEEDBACK</div><h2>Help improve ModMatch Auto</h2></div><button class="x" data-close="feedbackModal">×</button></div>
+    <div id="feedbackMsg"></div>
+    <form id="feedbackForm">
+      <div class="field"><label>HOW WOULD YOU RATE IT?</label><select name="rating" required><option value="5">5 — Excellent</option><option value="4">4 — Good</option><option value="3">3 — Okay</option><option value="2">2 — Needs work</option><option value="1">1 — Difficult</option></select></div>
+      <div class="field"><label>WHAT BEST DESCRIBES YOU?</label><select name="role"><option value="">Choose one</option><option>Car enthusiast</option><option>DIY mechanic</option><option>Professional mechanic</option><option>Shop owner</option><option>New to modifying cars</option><option>Other</option></select></div>
+      <div class="field"><label>WHAT DID YOU LIKE?</label><textarea name="liked" rows="3" placeholder="What should we keep?"></textarea></div>
+      <div class="field"><label>WHAT WAS CONFUSING OR HARD?</label><textarea name="confusing" rows="3" placeholder="Where did you get stuck?"></textarea></div>
+      <div class="field"><label>WHAT FEATURE IS MISSING?</label><textarea name="missing" rows="3" placeholder="VIN lookup, fitment, more parts, photos, sharing..."></textarea></div>
+      <div class="field"><label>WOULD YOU USE IT AGAIN?</label><select name="wouldUse"><option value="">Not sure yet</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+      <div class="field"><label>EMAIL (OPTIONAL)</label><input type="email" name="feedbackEmail" placeholder="you@example.com"></div>
+      <button class="btn primary" style="width:100%">Send feedback</button>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = "https://sbvsnesncumyszcvwnmy.supabase.co";
+const SUPABASE_KEY = "sb_publishable_T2e6sgGmPWtWWNVjD4l7Jw_PmGjVjlN";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const money = (n) => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(Number(n||0));
+
+let authMode = "signup";
+let session = null;
+let user = null;
+let vehicles = [];
+let builds = [];
+let items = [];
+let activeVehicle = null;
+let activeBuild = null;
+
+const catalog = [
+ {category:"Wheels & Tires",part_name:"Flow-Form Wheels",brand:"Apex",vendor:"Compare vendors",price:1450,install_cost:120,fitment_notes:"Verify diameter, width, offset, bolt pattern, center bore and tire clearance."},
+ {category:"Suspension",part_name:"Coilover Kit",brand:"BC Racing",vendor:"Compare vendors",price:1195,install_cost:450,fitment_notes:"Alignment normally required after installation."},
+ {category:"Intake",part_name:"Performance Intake",brand:"K&N",vendor:"Compare vendors",price:420,install_cost:120,fitment_notes:"Verify exact engine and emissions application."},
+ {category:"Exhaust",part_name:"Cat-Back Exhaust",brand:"Borla",vendor:"Compare vendors",price:1350,install_cost:280,fitment_notes:"Verify wheelbase, drivetrain and exhaust configuration."},
+ {category:"Performance",part_name:"Stage 1 Tune",brand:"Performance Tune",vendor:"Local tuner",price:650,install_cost:0,fitment_notes:"Engine/transmission condition and fuel requirements matter."},
+ {category:"Lighting",part_name:"LED Lighting Upgrade",brand:"Morimoto",vendor:"Compare vendors",price:780,install_cost:180,fitment_notes:"Verify housing, connector and street-use legality."},
+ {category:"Exterior",part_name:"Front Splitter",brand:"Street Aero",vendor:"Compare vendors",price:390,install_cost:160,fitment_notes:"Verify bumper/trim compatibility."},
+ {category:"Interior",part_name:"Dash Camera",brand:"Viofo",vendor:"Compare vendors",price:230,install_cost:140,fitment_notes:"Hardwire kit and fuse location vary by vehicle."}
+];
+
+function show(id){["landing","authView","appView"].forEach(x=>$("#"+x).classList.add("hidden"));$("#"+id).classList.remove("hidden")}
+function msg(el,text,type="notice"){el.innerHTML = text ? '<div class="'+type+'">'+text+'</div>' : ""}
+function openModal(id){$("#"+id).classList.remove("hidden")}
+function closeModal(id){$("#"+id).classList.add("hidden")}
+
+function setAuthMode(mode){
+  authMode=mode;
+  $("#authTitle").textContent=mode==="signup"?"Create your account":"Sign in";
+  $("#authSub").textContent=mode==="signup"?"Start a garage and save your build.":"Welcome back to your garage.";
+  $("#authSubmit").textContent=mode==="signup"?"Create account":"Sign in";
+  $("#toggleAuth").textContent=mode==="signup"?"Already have an account? Sign in":"Need an account? Create one";
+  msg($("#authMsg"),"");
+  show("authView");
+}
+
+async function loadWorkspace(){
+  if(!user) return;
+  const [v,b,i] = await Promise.all([
+    supabase.from("vehicles").select("*").order("created_at",{ascending:true}),
+    supabase.from("builds").select("*").order("created_at",{ascending:true}),
+    supabase.from("build_items").select("*").order("created_at",{ascending:true})
+  ]);
+  if(v.error||b.error||i.error){ msg($("#appMsg"),(v.error||b.error||i.error).message,"notice error"); return; }
+  vehicles=v.data||[]; builds=b.data||[]; items=i.data||[];
+  if(activeVehicle) activeVehicle=vehicles.find(x=>x.id===activeVehicle.id)||vehicles[0]||null;
+  else activeVehicle=vehicles[0]||null;
+  activeBuild=activeVehicle?builds.find(x=>x.vehicle_id===activeVehicle.id)||null:null;
+  renderAll();
+}
+
+function renderAll(){
+  renderGarage(); renderCatalog(); renderBuild();
+  $("#topActions").innerHTML=user?'<button class="btn small" id="logoutBtn">Sign out</button>':'<button class="btn small" id="loginTop">Sign in</button>';
+  $("#logoutBtn")?.addEventListener("click",logout);
+  $("#loginTop")?.addEventListener("click",()=>setAuthMode("signin"));
+}
+
+function renderGarage(){
+  const el=$("#vehicleList");
+  if(!vehicles.length){el.innerHTML='<div class="card empty">No vehicles yet. Add your first car to start a build.</div>';return}
+  el.innerHTML=vehicles.map(v=>`
+    <div class="card vehicle">
+      <div><div class="chip">${v.nickname||"Vehicle"}</div><div style="margin-top:8px"><strong>${v.year} ${escapeHtml(v.make)} ${escapeHtml(v.model)}</strong></div><div class="muted">${escapeHtml(v.trim||"")} ${v.engine?"• "+escapeHtml(v.engine):""}</div></div>
+      <button class="btn ${activeVehicle?.id===v.id?"primary":""} small" data-vehicle="${v.id}">${activeVehicle?.id===v.id?"Active build":"Open build"}</button>
+    </div>`).join("");
+  $$("[data-vehicle]").forEach(btn=>btn.addEventListener("click",()=>{activeVehicle=vehicles.find(v=>v.id===btn.dataset.vehicle);activeBuild=builds.find(b=>b.vehicle_id===activeVehicle.id)||null;renderAll();setView("build")}));
+}
+
+function renderCatalog(){
+  $("#catalog").innerHTML=catalog.map((p,idx)=>`
+    <div class="card part"><span class="chip">${p.category}</span><h3>${p.brand} ${p.part_name}</h3><div class="price">${money(p.price)}</div><div class="muted">Est. install ${money(p.install_cost)}</div><p>${p.fitment_notes}</p><button class="btn primary small" data-add-part="${idx}">Add to build</button></div>
+  `).join("");
+  $$("[data-add-part]").forEach(btn=>btn.addEventListener("click",()=>addCatalogPart(catalog[Number(btn.dataset.addPart)])));
+}
+
+function renderBuild(){
+  if(!activeVehicle||!activeBuild){
+    $("#buildHeading").textContent="Build plan";
+    $("#buildSummary").innerHTML='<div class="card empty">Add a vehicle first to create a build.</div>';
+    $("#buildItems").innerHTML='<div class="empty">No build selected.</div>';
+    $("#budgetInput").value="";
+    return;
+  }
+  $("#buildHeading").textContent=`${activeVehicle.year} ${activeVehicle.make} ${activeVehicle.model}`;
+  const list=items.filter(x=>x.build_id===activeBuild.id);
+  const parts=list.reduce((s,x)=>s+Number(x.price||0),0);
+  const install=list.reduce((s,x)=>s+Number(x.install_cost||0),0);
+  const total=parts+install;
+  const budget=Number(activeBuild.budget||0);
+  $("#buildSummary").innerHTML=`<div class="summary">
+    <div class="stat"><span class="muted">Parts</span><b>${money(parts)}</b></div>
+    <div class="stat"><span class="muted">Install</span><b>${money(install)}</b></div>
+    <div class="stat"><span class="muted">Total</span><b>${money(total)}</b></div>
+    <div class="stat"><span class="muted">Budget left</span><b>${budget?money(budget-total):"Set budget"}</b></div>
+  </div>`;
+  $("#budgetInput").value=budget||"";
+  $("#buildItems").innerHTML=list.length?list.map(x=>`
+    <div class="row"><div><b>${escapeHtml(x.brand)} ${escapeHtml(x.part_name)}</b><div class="muted">${escapeHtml(x.category)} • ${money(x.price)} + ${money(x.install_cost)} install</div></div><button class="btn danger small" data-remove="${x.id}">Remove</button></div>
+  `).join(""):'<div class="empty">No parts yet. Open Find Mods and add your first part.</div>';
+  $$("[data-remove]").forEach(btn=>btn.addEventListener("click",()=>removeItem(btn.dataset.remove)));
+}
+
+async function ensureBuild(){
+  if(activeBuild) return activeBuild;
+  if(!activeVehicle) throw new Error("Add a vehicle first.");
+  const {data,error}=await supabase.from("builds").insert({user_id:user.id,vehicle_id:activeVehicle.id,name:"My Build",status:"planning",budget:0}).select().single();
+  if(error) throw error;
+  builds.push(data); activeBuild=data; return data;
+}
+
+async function addCatalogPart(p){
+  if(!user){setAuthMode("signup");return}
+  if(!activeVehicle){msg($("#appMsg"),"Add a vehicle before adding parts.","notice");setView("garage");return}
+  try{
+    const b=await ensureBuild();
+    const {error}=await supabase.from("build_items").insert({user_id:user.id,build_id:b.id,category:p.category,part_name:p.part_name,brand:p.brand,vendor:p.vendor,price:p.price,install_cost:p.install_cost,fitment_notes:p.fitment_notes,status:"planned"});
+    if(error) throw error;
+    msg($("#appMsg"),"Part added to your build.","notice success"); await loadWorkspace();
+  }catch(e){msg($("#appMsg"),e.message,"notice error")}
+}
+
+async function removeItem(id){
+  const {error}=await supabase.from("build_items").delete().eq("id",id);
+  if(error) msg($("#appMsg"),error.message,"notice error"); else await loadWorkspace();
+}
+
+async function logout(){
+  await supabase.auth.signOut(); user=null; session=null; vehicles=[];builds=[];items=[];activeVehicle=null;activeBuild=null;show("landing");renderAll();
+}
+
+function setView(v){
+  ["garage","mods","build"].forEach(x=>$("#"+x+"View").classList.toggle("hidden",x!==v));
+  $$("[data-view]").forEach(b=>b.classList.toggle("primary",b.dataset.view===v));
+}
+
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+$("#startBtn").addEventListener("click",()=>setAuthMode("signup"));
+$("#signinBtn").addEventListener("click",()=>setAuthMode("signin"));
+$("#loginTop").addEventListener("click",()=>setAuthMode("signin"));
+$("#backHome").addEventListener("click",()=>show("landing"));
+$("#toggleAuth").addEventListener("click",()=>setAuthMode(authMode==="signup"?"signin":"signup"));
+$("#feedbackBtn").addEventListener("click",()=>openModal("feedbackModal"));
+$("#addVehicleBtn").addEventListener("click",()=>openModal("vehicleModal"));
+$$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeModal(b.dataset.close)));
+$$("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+
+$("#authForm").addEventListener("submit",async(e)=>{
+  e.preventDefault(); msg($("#authMsg"),"");
+  const email=$("#email").value.trim(), password=$("#password").value;
+  $("#authSubmit").disabled=true;
+  if(authMode==="signup"){
+    const {data,error}=await supabase.auth.signUp({email,password});
+    if(error) msg($("#authMsg"),escapeHtml(error.message),"notice error");
+    else if(data.session){user=data.user;session=data.session;show("appView");await loadWorkspace()}
+    else msg($("#authMsg"),"Account created. Check your email for the confirmation link, then sign in.","notice success");
+  }else{
+    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+    if(error) msg($("#authMsg"),escapeHtml(error.message),"notice error");
+    else{user=data.user;session=data.session;show("appView");await loadWorkspace()}
+  }
+  $("#authSubmit").disabled=false;
+});
+
+$("#vehicleForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  if(!user) return setAuthMode("signup");
+  const f=new FormData(e.currentTarget);
+  const payload={user_id:user.id,year:Number(f.get("year")),make:String(f.get("make")).trim(),model:String(f.get("model")).trim(),trim:String(f.get("trim")||"").trim(),engine:String(f.get("engine")||"").trim(),nickname:String(f.get("nickname")||"").trim()};
+  const {data,error}=await supabase.from("vehicles").insert(payload).select().single();
+  if(error){msg($("#appMsg"),escapeHtml(error.message),"notice error");return}
+  activeVehicle=data;
+  const {data:build,error:buildError}=await supabase.from("builds").insert({user_id:user.id,vehicle_id:data.id,name:"My Build",status:"planning",budget:0}).select().single();
+  if(buildError){msg($("#appMsg"),escapeHtml(buildError.message),"notice error");return}
+  activeBuild=build;
+  e.currentTarget.reset();closeModal("vehicleModal");await loadWorkspace();msg($("#appMsg"),"Vehicle added. Your build is ready.","notice success");
+});
+
+$("#budgetForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();if(!activeBuild)return;
+  const budget=Number($("#budgetInput").value||0);
+  const {error}=await supabase.from("builds").update({budget}).eq("id",activeBuild.id);
+  if(error)msg($("#appMsg"),escapeHtml(error.message),"notice error");else{await loadWorkspace();msg($("#appMsg"),"Budget saved.","notice success")}
+});
+
+$("#feedbackForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();const f=new FormData(e.currentTarget);const would=String(f.get("wouldUse")||"");
+  const {error}=await supabase.from("feedback").insert({user_id:user?.id||null,rating:Number(f.get("rating")),role:String(f.get("role")||"")||null,liked:String(f.get("liked")||"")||null,confusing:String(f.get("confusing")||"")||null,missing:String(f.get("missing")||"")||null,would_use:would==="yes"?true:would==="no"?false:null,email:String(f.get("feedbackEmail")||"")||null,page:user?"beta-app":"landing"});
+  if(error)msg($("#feedbackMsg"),escapeHtml(error.message),"notice error");else{msg($("#feedbackMsg"),"Thank you — your feedback was saved.","notice success");e.currentTarget.reset();setTimeout(()=>{closeModal("feedbackModal");msg($("#feedbackMsg"),"")},1100)}
+});
+
+const {data:{session:initialSession}}=await supabase.auth.getSession();
+session=initialSession;user=initialSession?.user||null;
+if(user){show("appView");await loadWorkspace()}else{show("landing");renderAll()}
+supabase.auth.onAuthStateChange(async(_event,newSession)=>{session=newSession;user=newSession?.user||null;if(user){show("appView");await loadWorkspace()}});
+</script>
+</body>
+</html>
