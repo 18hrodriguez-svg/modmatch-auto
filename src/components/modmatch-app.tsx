@@ -226,6 +226,12 @@ export function ModMatchApp() {
       if (!mounted) return;
       if (data.user) {
         setUser({ id: data.user.id, email: data.user.email ?? "" });
+        if (
+          data.user.user_metadata?.beta_terms_version === "2026-09-18-beta" &&
+          data.user.user_metadata?.beta_privacy_version === "2026-09-18-beta"
+        ) {
+          void recordBetaLegalAcceptances(data.user.id);
+        }
         void loadWorkspace();
         if (returnedFromSignup) {
           setNotice("Email confirmed — welcome to ModMatch Auto.");
@@ -245,7 +251,15 @@ export function ModMatchApp() {
         setResetMessage("");
         setResetOpen(true);
       }
-      if (nextUser) void loadWorkspace();
+      if (nextUser) {
+        if (
+          nextUser.user_metadata?.beta_terms_version === "2026-09-18-beta" &&
+          nextUser.user_metadata?.beta_privacy_version === "2026-09-18-beta"
+        ) {
+          void recordBetaLegalAcceptances(nextUser.id);
+        }
+        void loadWorkspace();
+      }
       else {
         setVehicles([]);
         setBuilds([]);
@@ -292,6 +306,20 @@ export function ModMatchApp() {
     setAuthOpen(true);
   }
 
+  async function recordBetaLegalAcceptances(userId: string) {
+    const { error } = await supabase.from("legal_acceptances").upsert(
+      [
+        { user_id: userId, document_type: "terms", document_version: "2026-09-18-beta" },
+        { user_id: userId, document_type: "privacy", document_version: "2026-09-18-beta" },
+      ],
+      {
+        onConflict: "user_id,document_type,document_version",
+        ignoreDuplicates: true,
+      },
+    );
+    if (error) console.warn("Could not record legal acceptance", error.message);
+  }
+
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAuthBusy(true);
@@ -300,13 +328,25 @@ export function ModMatchApp() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("fullName") ?? "").trim();
+    const termsAccepted = form.get("termsAccepted") === "on";
+    const privacyAccepted = form.get("privacyAccepted") === "on";
+
+    if (authMode === "signup" && (!termsAccepted || !privacyAccepted)) {
+      setAuthMessage("Please review and accept the Beta Terms and Privacy Notice.");
+      setAuthBusy(false);
+      return;
+    }
 
     if (authMode === "signup") {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName },
+          data: {
+            full_name: fullName,
+            beta_terms_version: "2026-09-18-beta",
+            beta_privacy_version: "2026-09-18-beta",
+          },
           emailRedirectTo: "https://modmatchauto.com",
         },
       });
@@ -317,6 +357,7 @@ export function ModMatchApp() {
         setConfirmationMessage("");
         setConfirmationOpen(true);
       } else {
+        if (data.user) void recordBetaLegalAcceptances(data.user.id);
         setAuthOpen(false);
         setNotice("Welcome to ModMatch Auto.");
       }
@@ -654,6 +695,11 @@ export function ModMatchApp() {
         <footer className="landing-footer">
           <Logo compact />
           <p>Built for people who take their builds seriously.</p>
+          <div className="landing-legal-links">
+            <Link href="/legal/terms/">Terms</Link>
+            <Link href="/legal/privacy/">Privacy</Link>
+            <Link href="/legal/marketplace/">Parts & marketplace safety</Link>
+          </div>
           <span>© 2026 ModMatch Auto</span>
         </footer>
 
@@ -894,6 +940,18 @@ function AuthModal({
           >
             Forgot password?
           </button>
+        )}
+        {mode === "signup" && (
+          <div className="legal-consent-group">
+            <label className="legal-consent">
+              <input name="termsAccepted" type="checkbox" required />
+              <span>I agree to the <Link href="/legal/terms/" target="_blank">Beta Terms of Use</Link>.</span>
+            </label>
+            <label className="legal-consent">
+              <input name="privacyAccepted" type="checkbox" required />
+              <span>I have read the <Link href="/legal/privacy/" target="_blank">Privacy Notice</Link>.</span>
+            </label>
+          </div>
         )}
         {message && <p className="form-message">{message}</p>}
         <button className="button button-primary button-full" disabled={busy}>
