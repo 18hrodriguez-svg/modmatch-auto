@@ -280,7 +280,10 @@ export function ModMatchApp() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: "https://modmatchauto.com",
+        },
       });
       if (error) setAuthMessage(error.message);
       else if (!data.session) {
