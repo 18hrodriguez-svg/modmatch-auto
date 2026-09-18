@@ -284,7 +284,11 @@ $("#authForm").addEventListener("submit",async(e)=>{
   const email=$("#email").value.trim(), password=$("#password").value;
   $("#authSubmit").disabled=true;
   if(authMode==="signup"){
-    const {data,error}=await supabase.auth.signUp({email,password});
+    const {data,error}=await supabase.auth.signUp({
+      email,
+      password,
+      options:{ emailRedirectTo:"https://modmatchauto.com" }
+    });
     if(error) msg($("#authMsg"),escapeHtml(error.message),"notice error");
     else if(data.session){user=data.user;session=data.session;show("appView");await loadWorkspace()}
     else msg($("#authMsg"),"Account created. Check your email for the confirmation link, then sign in.","notice success");
