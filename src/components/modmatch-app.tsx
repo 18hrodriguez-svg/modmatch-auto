@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
@@ -579,9 +580,14 @@ export function ModMatchApp() {
       <main className="landing-shell">
         <header className="landing-nav">
           <Logo />
-          <button className="button button-ghost" onClick={() => openAuth("signin")}>
-            Sign in
-          </button>
+          <div className="landing-nav-actions">
+            <Link className="button button-secondary shop-nav-link" href="/shops/">
+              For shops
+            </Link>
+            <button className="button button-ghost" onClick={() => openAuth("signin")}>
+              Sign in
+            </button>
+          </div>
         </header>
 
         <section className="hero-section">
