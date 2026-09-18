@@ -303,3 +303,43 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+.feedback-trigger {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 45;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  background: rgba(9, 20, 35, 0.94);
+  color: #dbeafe;
+  border-radius: 999px;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.feedback-trigger:hover {
+  border-color: rgba(96, 165, 250, 0.8);
+  background: rgba(13, 34, 60, 0.98);
+}
+
+.feedback-form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 86px;
+}
+
+@media (max-width: 720px) {
+  .feedback-trigger {
+    right: 14px;
+    bottom: 82px;
+    padding: 10px 13px;
+    font-size: 0.76rem;
+  }
+}
