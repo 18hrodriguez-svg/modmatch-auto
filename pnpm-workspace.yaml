@@ -1,5 +1,3 @@
-minimumReleaseAge: 0
-
 allowBuilds:
   sharp: false
   unrs-resolver: false
