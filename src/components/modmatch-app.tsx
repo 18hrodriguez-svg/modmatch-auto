@@ -164,6 +164,9 @@ export function ModMatchApp() {
   const [category, setCategory] = useState<ModCategory | "All">("All");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const loadWorkspace = useCallback(async () => {
     setWorkspaceBusy(true);
@@ -420,6 +423,39 @@ export function ModMatchApp() {
     }
   }
 
+  async function submitFeedback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedbackBusy(true);
+    setFeedbackMessage("");
+
+    const form = new FormData(event.currentTarget);
+    const wouldUse = String(form.get("wouldUse") ?? "");
+
+    const { error } = await supabase.from("feedback").insert({
+      user_id: user?.id ?? null,
+      rating: Number(form.get("rating") || 5),
+      role: String(form.get("role") ?? "").trim() || null,
+      liked: String(form.get("liked") ?? "").trim() || null,
+      confusing: String(form.get("confusing") ?? "").trim() || null,
+      missing: String(form.get("missing") ?? "").trim() || null,
+      would_use: wouldUse === "yes" ? true : wouldUse === "no" ? false : null,
+      email: String(form.get("email") ?? "").trim() || null,
+      page: user ? view : "landing",
+    });
+
+    if (error) {
+      setFeedbackMessage("Could not send feedback yet. Please try again.");
+    } else {
+      setFeedbackMessage("Thank you — your feedback was saved.");
+      event.currentTarget.reset();
+      window.setTimeout(() => {
+        setFeedbackOpen(false);
+        setFeedbackMessage("");
+      }, 1200);
+    }
+    setFeedbackBusy(false);
+  }
+
   if (!authReady) {
     return (
       <main className="loading-screen">
@@ -516,6 +552,17 @@ export function ModMatchApp() {
             onSubmit={submitAuth}
           />
         )}
+        <button className="feedback-trigger" onClick={() => { setFeedbackMessage(""); setFeedbackOpen(true); }}>
+          Give feedback
+        </button>
+        {feedbackOpen && (
+          <FeedbackModal
+            busy={feedbackBusy}
+            message={feedbackMessage}
+            onClose={() => setFeedbackOpen(false)}
+            onSubmit={submitFeedback}
+          />
+        )}
         {notice && <div className="toast" role="status">{notice}</div>}
       </main>
     );
@@ -582,6 +629,17 @@ export function ModMatchApp() {
 
       {vehicleModalOpen && <VehicleModal onClose={() => setVehicleModalOpen(false)} onSubmit={addVehicle} />}
       {partModalOpen && <CustomPartModal onClose={() => setPartModalOpen(false)} onSubmit={addCustomPart} />}
+      <button className="feedback-trigger" onClick={() => { setFeedbackMessage(""); setFeedbackOpen(true); }}>
+        Give feedback
+      </button>
+      {feedbackOpen && (
+        <FeedbackModal
+          busy={feedbackBusy}
+          message={feedbackMessage}
+          onClose={() => setFeedbackOpen(false)}
+          onSubmit={submitFeedback}
+        />
+      )}
       {notice && <div className="toast" role="status">{notice}</div>}
     </main>
   );
@@ -659,4 +717,74 @@ function VehicleModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (e
 
 function CustomPartModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   return <ModalShell title="Add a custom part" eyebrow="BUILD SHEET" onClose={onClose}><form className="stacked-form form-grid" onSubmit={onSubmit}><label className="span-two"><span>PART NAME</span><input name="partName" required placeholder="19-inch wheel package" /></label><label><span>CATEGORY</span><select name="category">{MOD_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>BRAND</span><input name="brand" placeholder="Brand" /></label><label><span>PART PRICE</span><input name="price" type="number" min="0" step="0.01" required placeholder="1700" /></label><label><span>INSTALL COST</span><input name="installCost" type="number" min="0" step="0.01" placeholder="200" /></label><label className="span-two"><span>VENDOR</span><input name="vendor" placeholder="Store or seller" /></label><label className="span-two"><span>PRODUCT LINK</span><input name="productUrl" type="url" placeholder="https://" /></label><label className="span-two"><span>FITMENT / INSTALL NOTES</span><textarea name="notes" rows={3} placeholder="Offset, tire size, required hardware…" /></label><button className="button button-primary button-full span-two"><Plus size={17} /> Add to build</button></form></ModalShell>;
+}
+
+
+function FeedbackModal({
+  busy,
+  message,
+  onClose,
+  onSubmit,
+}: {
+  busy: boolean;
+  message: string;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <ModalShell title="Help improve ModMatch Auto" eyebrow="BETA FEEDBACK" onClose={onClose}>
+      <form className="stacked-form feedback-form" onSubmit={onSubmit}>
+        <label>
+          <span>HOW WOULD YOU RATE THE EXPERIENCE?</span>
+          <select name="rating" defaultValue="5" required>
+            <option value="5">5 — Excellent</option>
+            <option value="4">4 — Good</option>
+            <option value="3">3 — Okay</option>
+            <option value="2">2 — Needs work</option>
+            <option value="1">1 — Difficult to use</option>
+          </select>
+        </label>
+        <label>
+          <span>WHAT BEST DESCRIBES YOU?</span>
+          <select name="role" defaultValue="">
+            <option value="">Choose one</option>
+            <option value="Car enthusiast">Car enthusiast</option>
+            <option value="DIY mechanic">DIY mechanic</option>
+            <option value="Professional mechanic">Professional mechanic</option>
+            <option value="Shop owner">Shop owner</option>
+            <option value="New to modifying cars">New to modifying cars</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label>
+          <span>WHAT DID YOU LIKE?</span>
+          <textarea name="liked" rows={3} placeholder="What should we keep?" />
+        </label>
+        <label>
+          <span>WHAT WAS CONFUSING OR HARD TO USE?</span>
+          <textarea name="confusing" rows={3} placeholder="Tell us where you got stuck." />
+        </label>
+        <label>
+          <span>WHAT FEATURE IS MISSING?</span>
+          <textarea name="missing" rows={3} placeholder="VIN lookup, real fitment, more parts, photos, sharing..." />
+        </label>
+        <label>
+          <span>WOULD YOU USE MODMATCH AUTO AGAIN?</span>
+          <select name="wouldUse" defaultValue="">
+            <option value="">Not sure yet</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label>
+          <span>EMAIL (OPTIONAL)</span>
+          <input name="email" type="email" autoComplete="email" placeholder="you@example.com" />
+        </label>
+        {message && <p className="form-message">{message}</p>}
+        <button className="button button-primary button-full" disabled={busy}>
+          {busy ? "Sending…" : "Send feedback"}
+        </button>
+      </form>
+    </ModalShell>
+  );
 }
