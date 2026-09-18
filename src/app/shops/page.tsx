@@ -271,7 +271,7 @@ export default function ShopsPage() {
       website: String(form.get("website") ?? "").trim(),
       is_published: wantsPublication,
       bar_license_number: barLicenseNumber,
-      license_jurisdiction: String(form.get("licenseJurisdiction") ?? state || "CA").trim(),
+      license_jurisdiction: String(form.get("licenseJurisdiction") || state || "CA").trim(),
       updated_at: new Date().toISOString(),
     };
 
