@@ -36,6 +36,9 @@ type ShopProfile = {
   bio: string;
   website: string;
   is_published: boolean;
+  verification_status: "pending" | "verified" | "rejected" | "suspended";
+  bar_license_number: string;
+  license_jurisdiction: string;
 };
 
 type ShopService = {
@@ -89,6 +92,13 @@ export default function ShopsPage() {
       const user = data.session?.user;
       if (user) {
         setAuthUser({ id: user.id, email: user.email ?? "" });
+        if (
+          user.user_metadata?.beta_terms_version === "2026-09-18-beta" &&
+          user.user_metadata?.beta_privacy_version === "2026-09-18-beta" &&
+          user.user_metadata?.marketplace_terms_version === "2026-09-18-beta"
+        ) {
+          void recordShopLegalAcceptances(user.id);
+        }
         await loadShopProfile(user.id);
       }
     };
@@ -98,8 +108,16 @@ export default function ShopsPage() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
       setAuthUser(user ? { id: user.id, email: user.email ?? "" } : null);
-      if (user) void loadShopProfile(user.id);
-      else {
+      if (user) {
+        if (
+          user.user_metadata?.beta_terms_version === "2026-09-18-beta" &&
+          user.user_metadata?.beta_privacy_version === "2026-09-18-beta" &&
+          user.user_metadata?.marketplace_terms_version === "2026-09-18-beta"
+        ) {
+          void recordShopLegalAcceptances(user.id);
+        }
+        void loadShopProfile(user.id);
+      } else {
         setProfile(null);
         setServices([]);
       }
@@ -153,6 +171,21 @@ export default function ShopsPage() {
     }
   }
 
+  async function recordShopLegalAcceptances(userId: string) {
+    const { error } = await supabase.from("legal_acceptances").upsert(
+      [
+        { user_id: userId, document_type: "terms", document_version: "2026-09-18-beta" },
+        { user_id: userId, document_type: "privacy", document_version: "2026-09-18-beta" },
+        { user_id: userId, document_type: "marketplace_terms", document_version: "2026-09-18-beta" },
+      ],
+      {
+        onConflict: "user_id,document_type,document_version",
+        ignoreDuplicates: true,
+      },
+    );
+    if (error) console.warn("Could not record shop legal acceptance", error.message);
+  }
+
   async function submitShopAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAuthBusy(true);
@@ -162,13 +195,28 @@ export default function ShopsPage() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("fullName") ?? "").trim();
+    const termsAccepted = form.get("termsAccepted") === "on";
+    const privacyAccepted = form.get("privacyAccepted") === "on";
+    const marketplaceAccepted = form.get("marketplaceAccepted") === "on";
+
+    if (authMode === "signup" && (!termsAccepted || !privacyAccepted || !marketplaceAccepted)) {
+      setAuthMessage("Please review and accept the beta legal notices.");
+      setAuthBusy(false);
+      return;
+    }
 
     if (authMode === "signup") {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName, account_type: "shop" },
+          data: {
+            full_name: fullName,
+            account_type: "shop",
+            beta_terms_version: "2026-09-18-beta",
+            beta_privacy_version: "2026-09-18-beta",
+            marketplace_terms_version: "2026-09-18-beta",
+          },
           emailRedirectTo: "https://modmatchauto.com/shops/",
         },
       });
@@ -176,6 +224,7 @@ export default function ShopsPage() {
       else if (!data.session) {
         setAuthMessage("Check your email to confirm the shop account, then return here and sign in.");
       } else {
+        if (data.user) void recordShopLegalAcceptances(data.user.id);
         setAuthMessage("Shop account created. Complete your business profile below.");
       }
     } else {
@@ -193,6 +242,16 @@ export default function ShopsPage() {
     setProfileMessage("");
 
     const form = new FormData(event.currentTarget);
+    const state = String(form.get("state") ?? "").trim().toUpperCase();
+    const barLicenseNumber = String(form.get("barLicenseNumber") ?? "").trim();
+    const wantsPublication = form.get("isPublished") === "on";
+
+    if (wantsPublication && state === "CA" && !barLicenseNumber) {
+      setProfileMessage("California repair businesses need a BAR/repair-business license number before requesting public discovery.");
+      setProfileBusy(false);
+      return;
+    }
+
     const payload = {
       owner_id: authUser.id,
       business_name: String(form.get("businessName") ?? "").trim(),
@@ -202,7 +261,7 @@ export default function ShopsPage() {
       email: String(form.get("businessEmail") ?? authUser.email).trim(),
       address_line1: String(form.get("address") ?? "").trim(),
       city: String(form.get("city") ?? "").trim(),
-      state: String(form.get("state") ?? "").trim(),
+      state,
       postal_code: String(form.get("postalCode") ?? "").trim(),
       service_radius_miles: Number(form.get("serviceRadius") || 25),
       labor_rate: Number(form.get("laborRate") || 0),
@@ -210,7 +269,9 @@ export default function ShopsPage() {
       shop_supplies_percent: Number(form.get("suppliesPercent") || 0),
       bio: String(form.get("bio") ?? "").trim(),
       website: String(form.get("website") ?? "").trim(),
-      is_published: form.get("isPublished") === "on",
+      is_published: wantsPublication,
+      bar_license_number: barLicenseNumber,
+      license_jurisdiction: String(form.get("licenseJurisdiction") ?? state || "CA").trim(),
       updated_at: new Date().toISOString(),
     };
 
@@ -341,6 +402,13 @@ export default function ShopsPage() {
               {authMode === "signup" && <label><span>YOUR NAME</span><input name="fullName" required placeholder="Owner or manager name" /></label>}
               <label><span>EMAIL</span><input name="email" type="email" required autoComplete="email" placeholder="shop@example.com" /></label>
               <label><span>PASSWORD</span><input name="password" type="password" minLength={8} required autoComplete={authMode === "signup" ? "new-password" : "current-password"} placeholder="8+ characters" /></label>
+              {authMode === "signup" && (
+                <div className="legal-consent-group shop-legal-consent">
+                  <label className="legal-consent"><input name="termsAccepted" type="checkbox" required /><span>I agree to the <Link href="/legal/terms/" target="_blank">Beta Terms</Link>.</span></label>
+                  <label className="legal-consent"><input name="privacyAccepted" type="checkbox" required /><span>I have read the <Link href="/legal/privacy/" target="_blank">Privacy Notice</Link>.</span></label>
+                  <label className="legal-consent"><input name="marketplaceAccepted" type="checkbox" required /><span>I understand the <Link href="/legal/marketplace/" target="_blank">Parts & marketplace safety policy</Link>.</span></label>
+                </div>
+              )}
               <button className="button button-primary" disabled={authBusy}>{authBusy ? "Working…" : authMode === "signup" ? "Create shop account" : "Sign in"}</button>
             </form>
             {authMessage && <p className="shop-form-message">{authMessage}</p>}
@@ -348,7 +416,7 @@ export default function ShopsPage() {
         ) : (
           <>
             <div className="shop-account-toolbar">
-              <div><strong>{authUser.email}</strong><span>{profile?.is_published ? "Public shop profile" : "Shop profile draft"}</span></div>
+              <div><strong>{authUser.email}</strong><span>{profile ? `Verification: ${profile.verification_status}` : "Shop profile draft"}</span></div>
               <button className="button button-secondary button-small" onClick={signOutShop}><LogOut size={15} /> Sign out</button>
             </div>
 
@@ -364,13 +432,15 @@ export default function ShopsPage() {
                 <label><span>CITY</span><input name="city" required defaultValue={profile?.city || ""} placeholder="Anaheim" /></label>
                 <label><span>STATE</span><input name="state" required defaultValue={profile?.state || "CA"} placeholder="CA" /></label>
                 <label><span>ZIP / POSTAL CODE</span><input name="postalCode" required defaultValue={profile?.postal_code || ""} placeholder="92805" /></label>
+                <label><span>REPAIR BUSINESS / BAR LICENSE #</span><input name="barLicenseNumber" defaultValue={profile?.bar_license_number || ""} placeholder="Required before CA public listing" /></label>
+                <label><span>LICENSE JURISDICTION</span><input name="licenseJurisdiction" defaultValue={profile?.license_jurisdiction || "CA"} placeholder="CA" /></label>
                 <label><span>SERVICE RADIUS (MILES)</span><input name="serviceRadius" type="number" min="0" max="500" defaultValue={profile?.service_radius_miles || 25} /></label>
                 <label><span>HOURLY LABOR RATE</span><input name="laborRate" type="number" min="0" step="1" required defaultValue={profile?.labor_rate || 165} /></label>
                 <label><span>DIAGNOSTIC FEE</span><input name="diagnosticFee" type="number" min="0" step="1" defaultValue={profile?.diagnostic_fee || 0} /></label>
                 <label><span>SHOP SUPPLIES %</span><input name="suppliesPercent" type="number" min="0" max="100" step=".5" defaultValue={profile?.shop_supplies_percent || 0} /></label>
                 <label className="shop-span-two"><span>SHOP BIO</span><textarea name="bio" rows={4} defaultValue={profile?.bio || ""} placeholder="Tell customers what you specialize in, certifications, experience, warranty policy, etc." /></label>
               </div>
-              <label className="shop-publish-toggle"><input name="isPublished" type="checkbox" defaultChecked={profile?.is_published || false} /><span><strong>Make my shop discoverable</strong><small>Customers will be able to find this business profile when shop discovery launches.</small></span></label>
+              <label className="shop-publish-toggle"><input name="isPublished" type="checkbox" defaultChecked={profile?.is_published || false} /><span><strong>Request public discovery</strong><small>Saving this preference does not publish the shop automatically. ModMatch verification must be completed first.</small></span></label>
               <button className="button button-primary" disabled={profileBusy}>{profileBusy ? "Saving…" : "Save shop profile"}</button>
               {profileMessage && <p className="shop-form-message">{profileMessage}</p>}
             </form>
