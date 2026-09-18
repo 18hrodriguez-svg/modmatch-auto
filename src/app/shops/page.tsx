@@ -7,12 +7,45 @@ import {
   Calculator,
   CheckCircle2,
   Clock3,
+  LogOut,
   MapPin,
   ShieldCheck,
   Smartphone,
   Wrench,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+
+import { supabase } from "@/lib/supabase";
+
+type ShopProfile = {
+  id: string;
+  owner_id: string;
+  business_name: string;
+  contact_name: string;
+  shop_type: "repair_shop" | "mobile_mechanic" | "both";
+  phone: string;
+  email: string;
+  address_line1: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  service_radius_miles: number;
+  labor_rate: number;
+  diagnostic_fee: number;
+  shop_supplies_percent: number;
+  bio: string;
+  website: string;
+  is_published: boolean;
+};
+
+type ShopService = {
+  id: string;
+  name: string;
+  category: string;
+  labor_hours: number | null;
+  parts_estimate: number;
+  flat_price: number | null;
+};
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -26,6 +59,17 @@ export default function ShopsPage() {
   const [parts, setParts] = useState(280);
   const [suppliesPct, setSuppliesPct] = useState(3);
 
+  const [authUser, setAuthUser] = useState<{ id: string; email: string } | null>(null);
+  const [authMode, setAuthMode] = useState<"signup" | "signin">("signup");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+
+  const [profile, setProfile] = useState<ShopProfile | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [services, setServices] = useState<ShopService[]>([]);
+  const [serviceBusy, setServiceBusy] = useState(false);
+
   const estimate = useMemo(() => {
     const labor = Math.max(0, laborRate) * Math.max(0, laborHours);
     const supplies = labor * (Math.max(0, suppliesPct) / 100);
@@ -36,13 +80,219 @@ export default function ShopsPage() {
     };
   }, [laborRate, laborHours, parts, suppliesPct]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      const user = data.session?.user;
+      if (user) {
+        setAuthUser({ id: user.id, email: user.email ?? "" });
+        await loadShopProfile(user.id);
+      }
+    };
+
+    void loadUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      setAuthUser(user ? { id: user.id, email: user.email ?? "" } : null);
+      if (user) void loadShopProfile(user.id);
+      else {
+        setProfile(null);
+        setServices([]);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function loadShopProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("shop_profiles")
+      .select("*")
+      .eq("owner_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      setProfileMessage(error.message);
+      return;
+    }
+
+    const nextProfile = data
+      ? ({
+          ...data,
+          service_radius_miles: Number(data.service_radius_miles),
+          labor_rate: Number(data.labor_rate),
+          diagnostic_fee: Number(data.diagnostic_fee),
+          shop_supplies_percent: Number(data.shop_supplies_percent),
+        } as ShopProfile)
+      : null;
+
+    setProfile(nextProfile);
+    if (nextProfile) {
+      setLaborRate(nextProfile.labor_rate || 165);
+      setSuppliesPct(nextProfile.shop_supplies_percent || 0);
+      const { data: serviceRows } = await supabase
+        .from("shop_services")
+        .select("id,name,category,labor_hours,parts_estimate,flat_price")
+        .eq("shop_id", nextProfile.id)
+        .order("created_at", { ascending: true });
+      setServices(
+        (serviceRows ?? []).map((row) => ({
+          ...row,
+          labor_hours: row.labor_hours == null ? null : Number(row.labor_hours),
+          parts_estimate: Number(row.parts_estimate),
+          flat_price: row.flat_price == null ? null : Number(row.flat_price),
+        })) as ShopService[],
+      );
+    }
+  }
+
+  async function submitShopAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthMessage("");
+
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    const fullName = String(form.get("fullName") ?? "").trim();
+
+    if (authMode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, account_type: "shop" },
+          emailRedirectTo: "https://modmatchauto.com/shops/",
+        },
+      });
+      if (error) setAuthMessage(error.message);
+      else if (!data.session) {
+        setAuthMessage("Check your email to confirm the shop account, then return here and sign in.");
+      } else {
+        setAuthMessage("Shop account created. Complete your business profile below.");
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setAuthMessage(error ? error.message : "Signed in. Complete or update your shop profile below.");
+    }
+
+    setAuthBusy(false);
+  }
+
+  async function saveShopProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!authUser) return;
+    setProfileBusy(true);
+    setProfileMessage("");
+
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      owner_id: authUser.id,
+      business_name: String(form.get("businessName") ?? "").trim(),
+      contact_name: String(form.get("contactName") ?? "").trim(),
+      shop_type: String(form.get("shopType") ?? "repair_shop"),
+      phone: String(form.get("phone") ?? "").trim(),
+      email: String(form.get("businessEmail") ?? authUser.email).trim(),
+      address_line1: String(form.get("address") ?? "").trim(),
+      city: String(form.get("city") ?? "").trim(),
+      state: String(form.get("state") ?? "").trim(),
+      postal_code: String(form.get("postalCode") ?? "").trim(),
+      service_radius_miles: Number(form.get("serviceRadius") || 25),
+      labor_rate: Number(form.get("laborRate") || 0),
+      diagnostic_fee: Number(form.get("diagnosticFee") || 0),
+      shop_supplies_percent: Number(form.get("suppliesPercent") || 0),
+      bio: String(form.get("bio") ?? "").trim(),
+      website: String(form.get("website") ?? "").trim(),
+      is_published: form.get("isPublished") === "on",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("shop_profiles")
+      .upsert(payload, { onConflict: "owner_id" })
+      .select()
+      .single();
+
+    if (error) {
+      setProfileMessage(error.message);
+    } else {
+      const saved = {
+        ...data,
+        service_radius_miles: Number(data.service_radius_miles),
+        labor_rate: Number(data.labor_rate),
+        diagnostic_fee: Number(data.diagnostic_fee),
+        shop_supplies_percent: Number(data.shop_supplies_percent),
+      } as ShopProfile;
+      setProfile(saved);
+      setLaborRate(saved.labor_rate || laborRate);
+      setSuppliesPct(saved.shop_supplies_percent || 0);
+      setProfileMessage(saved.is_published ? "Shop profile saved and published." : "Shop profile saved as a draft.");
+    }
+
+    setProfileBusy(false);
+  }
+
+  async function addService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!profile) return;
+    setServiceBusy(true);
+
+    const form = new FormData(event.currentTarget);
+    const flatValue = String(form.get("flatPrice") ?? "").trim();
+
+    const { data, error } = await supabase
+      .from("shop_services")
+      .insert({
+        shop_id: profile.id,
+        name: String(form.get("serviceName") ?? "").trim(),
+        category: String(form.get("category") ?? "General Repair").trim(),
+        labor_hours: Number(form.get("laborHours") || 0),
+        labor_time_source: "shop_entered",
+        parts_estimate: Number(form.get("partsEstimate") || 0),
+        flat_price: flatValue ? Number(flatValue) : null,
+        notes: String(form.get("notes") ?? "").trim(),
+      })
+      .select("id,name,category,labor_hours,parts_estimate,flat_price")
+      .single();
+
+    if (!error && data) {
+      setServices((current) => [
+        ...current,
+        {
+          ...data,
+          labor_hours: data.labor_hours == null ? null : Number(data.labor_hours),
+          parts_estimate: Number(data.parts_estimate),
+          flat_price: data.flat_price == null ? null : Number(data.flat_price),
+        } as ShopService,
+      ]);
+      event.currentTarget.reset();
+    } else if (error) {
+      setProfileMessage(error.message);
+    }
+
+    setServiceBusy(false);
+  }
+
+  async function signOutShop() {
+    await supabase.auth.signOut();
+    setAuthMessage("");
+    setProfileMessage("");
+  }
+
   return (
     <main className="shop-demo-shell">
       <header className="shop-demo-nav">
         <Link href="/" className="shop-back-link">
           <ArrowLeft size={17} /> ModMatch Auto
         </Link>
-        <span className="shop-beta-pill">SHOP PARTNER PREVIEW</span>
+        <span className="shop-beta-pill">SHOP PARTNER BETA</span>
       </header>
 
       <section className="shop-demo-hero">
@@ -59,19 +309,95 @@ export default function ShopsPage() {
             <div className="shop-preview-icon"><Building2 size={24} /></div>
             <div>
               <span className="micro-label">CUSTOMER VIEW</span>
-              <h2>Example Auto Shop</h2>
-              <p><MapPin size={14} /> Anaheim, CA · 4.8 miles away</p>
+              <h2>{profile?.business_name || "Example Auto Shop"}</h2>
+              <p><MapPin size={14} /> {profile?.city || "Anaheim"}, {profile?.state || "CA"} · nearby</p>
             </div>
           </div>
           <div className="shop-preview-stats">
-            <div><span>LABOR RATE</span><strong>{money.format(laborRate)}/hr</strong></div>
-            <div><span>SHOP TYPE</span><strong>Repair shop</strong></div>
-            <div><span>SERVICE AREA</span><strong>25 miles</strong></div>
+            <div><span>LABOR RATE</span><strong>{money.format(profile?.labor_rate || laborRate)}/hr</strong></div>
+            <div><span>SHOP TYPE</span><strong>{profile ? profile.shop_type.replaceAll("_", " ") : "Repair shop"}</strong></div>
+            <div><span>SERVICE AREA</span><strong>{profile?.service_radius_miles || 25} miles</strong></div>
           </div>
           <div className="shop-preview-services">
-            <span>Diagnostics</span><span>Maintenance</span><span>Brakes</span><span>Suspension</span>
+            {(services.length ? services.slice(0, 4).map((service) => service.name) : ["Diagnostics","Maintenance","Brakes","Suspension"]).map((service) => <span key={service}>{service}</span>)}
           </div>
         </div>
+      </section>
+
+      <section className="shop-account-section">
+        <div className="shop-section-heading">
+          <span className="micro-label">TRY THE SHOP SIDE</span>
+          <h2>{authUser ? "Manage your shop profile" : "Create a shop account"}</h2>
+          <p>This is the real beta onboarding flow that a mechanic or shop owner can use.</p>
+        </div>
+
+        {!authUser ? (
+          <div className="shop-account-card">
+            <div className="shop-auth-toggle">
+              <button className={authMode === "signup" ? "active" : ""} onClick={() => { setAuthMode("signup"); setAuthMessage(""); }}>Create shop account</button>
+              <button className={authMode === "signin" ? "active" : ""} onClick={() => { setAuthMode("signin"); setAuthMessage(""); }}>Shop sign in</button>
+            </div>
+            <form className="shop-profile-form" onSubmit={submitShopAuth}>
+              {authMode === "signup" && <label><span>YOUR NAME</span><input name="fullName" required placeholder="Owner or manager name" /></label>}
+              <label><span>EMAIL</span><input name="email" type="email" required autoComplete="email" placeholder="shop@example.com" /></label>
+              <label><span>PASSWORD</span><input name="password" type="password" minLength={8} required autoComplete={authMode === "signup" ? "new-password" : "current-password"} placeholder="8+ characters" /></label>
+              <button className="button button-primary" disabled={authBusy}>{authBusy ? "Working…" : authMode === "signup" ? "Create shop account" : "Sign in"}</button>
+            </form>
+            {authMessage && <p className="shop-form-message">{authMessage}</p>}
+          </div>
+        ) : (
+          <>
+            <div className="shop-account-toolbar">
+              <div><strong>{authUser.email}</strong><span>{profile?.is_published ? "Public shop profile" : "Shop profile draft"}</span></div>
+              <button className="button button-secondary button-small" onClick={signOutShop}><LogOut size={15} /> Sign out</button>
+            </div>
+
+            <form key={profile?.id || "new"} className="shop-profile-card" onSubmit={saveShopProfile}>
+              <div className="shop-profile-grid">
+                <label><span>BUSINESS NAME</span><input name="businessName" required defaultValue={profile?.business_name || ""} placeholder="Example Auto Shop" /></label>
+                <label><span>CONTACT NAME</span><input name="contactName" required defaultValue={profile?.contact_name || ""} placeholder="Owner / manager" /></label>
+                <label><span>SHOP TYPE</span><select name="shopType" defaultValue={profile?.shop_type || "repair_shop"}><option value="repair_shop">Repair shop</option><option value="mobile_mechanic">Mobile mechanic</option><option value="both">Shop + mobile service</option></select></label>
+                <label><span>PUBLIC PHONE</span><input name="phone" defaultValue={profile?.phone || ""} placeholder="(714) 555-0123" /></label>
+                <label><span>BUSINESS EMAIL</span><input name="businessEmail" type="email" defaultValue={profile?.email || authUser.email} /></label>
+                <label><span>WEBSITE (OPTIONAL)</span><input name="website" type="url" defaultValue={profile?.website || ""} placeholder="https://" /></label>
+                <label className="shop-span-two"><span>BUSINESS ADDRESS (PHYSICAL SHOPS)</span><input name="address" defaultValue={profile?.address_line1 || ""} placeholder="123 Main St" /></label>
+                <label><span>CITY</span><input name="city" required defaultValue={profile?.city || ""} placeholder="Anaheim" /></label>
+                <label><span>STATE</span><input name="state" required defaultValue={profile?.state || "CA"} placeholder="CA" /></label>
+                <label><span>ZIP / POSTAL CODE</span><input name="postalCode" required defaultValue={profile?.postal_code || ""} placeholder="92805" /></label>
+                <label><span>SERVICE RADIUS (MILES)</span><input name="serviceRadius" type="number" min="0" max="500" defaultValue={profile?.service_radius_miles || 25} /></label>
+                <label><span>HOURLY LABOR RATE</span><input name="laborRate" type="number" min="0" step="1" required defaultValue={profile?.labor_rate || 165} /></label>
+                <label><span>DIAGNOSTIC FEE</span><input name="diagnosticFee" type="number" min="0" step="1" defaultValue={profile?.diagnostic_fee || 0} /></label>
+                <label><span>SHOP SUPPLIES %</span><input name="suppliesPercent" type="number" min="0" max="100" step=".5" defaultValue={profile?.shop_supplies_percent || 0} /></label>
+                <label className="shop-span-two"><span>SHOP BIO</span><textarea name="bio" rows={4} defaultValue={profile?.bio || ""} placeholder="Tell customers what you specialize in, certifications, experience, warranty policy, etc." /></label>
+              </div>
+              <label className="shop-publish-toggle"><input name="isPublished" type="checkbox" defaultChecked={profile?.is_published || false} /><span><strong>Make my shop discoverable</strong><small>Customers will be able to find this business profile when shop discovery launches.</small></span></label>
+              <button className="button button-primary" disabled={profileBusy}>{profileBusy ? "Saving…" : "Save shop profile"}</button>
+              {profileMessage && <p className="shop-form-message">{profileMessage}</p>}
+            </form>
+
+            {profile && (
+              <div className="shop-service-builder">
+                <div className="shop-section-heading">
+                  <span className="micro-label">COMMON SERVICES</span>
+                  <h2>Save the shop’s normal labor time</h2>
+                  <p>This is the beta method until ModMatch Auto licenses a professional labor-time guide.</p>
+                </div>
+                <form className="shop-profile-card" onSubmit={addService}>
+                  <div className="shop-profile-grid">
+                    <label><span>SERVICE / JOB</span><input name="serviceName" required placeholder="Front brake pads & rotors" /></label>
+                    <label><span>CATEGORY</span><input name="category" defaultValue="General Repair" /></label>
+                    <label><span>LABOR HOURS</span><input name="laborHours" type="number" min="0" step=".1" required placeholder="2.0" /></label>
+                    <label><span>PARTS ESTIMATE</span><input name="partsEstimate" type="number" min="0" step="1" defaultValue="0" /></label>
+                    <label><span>FLAT PRICE (OPTIONAL)</span><input name="flatPrice" type="number" min="0" step="1" placeholder="Leave blank" /></label>
+                    <label><span>NOTES</span><input name="notes" placeholder="Includes standard hardware…" /></label>
+                  </div>
+                  <button className="button button-secondary" disabled={serviceBusy}>{serviceBusy ? "Adding…" : "Add service"}</button>
+                </form>
+                {services.length > 0 && <div className="shop-service-list">{services.map((service) => <div key={service.id}><div><strong>{service.name}</strong><span>{service.category}</span></div><span>{service.labor_hours ?? 0} hrs</span><span>{service.flat_price != null ? money.format(service.flat_price) : "Rate × hours"}</span></div>)}</div>}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <section className="shop-demo-section">
