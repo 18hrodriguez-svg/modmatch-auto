@@ -217,6 +217,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .form-message { margin: 0; padding: .75rem; border: 1px solid #33435d; border-radius: .6rem; background: #121b28; color: #b3c0d0; font-size: .76rem; line-height: 1.45; }
 .modal-switch { margin: 1.15rem 0 0; color: #778499; font-size: .76rem; text-align: center; }
 .modal-switch button { margin-left: .35rem; border: 0; background: transparent; color: var(--blue-light); font-weight: 700; cursor: pointer; }
+.forgot-link { align-self: flex-end; margin-top: -.2rem; border: 0; background: transparent; color: var(--blue-light); font-size: .74rem; font-weight: 700; cursor: pointer; }
+.forgot-link:hover { text-decoration: underline; }
+.confirmation-copy { display: grid; gap: .9rem; }
+.confirmation-copy > p { margin: 0; color: #8f9caf; font-size: .86rem; line-height: 1.55; }
+.confirmation-email { display: block; padding: .8rem .9rem; border: 1px solid #26364d; border-radius: .7rem; background: #09111b; color: #dbe8ff; font-size: .92rem; overflow-wrap: anywhere; }
+.confirmation-actions { display: grid; gap: .7rem; margin-top: .2rem; }
+.confirmation-signin { justify-self: center; }
+.auth-return-shell { display: grid; min-height: 100vh; place-items: center; }
 .toast { position: fixed; z-index: 150; right: 1.2rem; bottom: 1.2rem; max-width: min(28rem, calc(100vw - 2rem)); padding: .85rem 1rem; border: 1px solid #34435b; border-radius: .75rem; background: #131b28; box-shadow: 0 15px 45px rgba(0,0,0,.45); color: #dbe5f3; font-size: .78rem; }
 .mobile-only, .bottom-nav, .floating-add { display: none; }
 
@@ -283,6 +291,26 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 @media (max-width: 520px) {
   .brand-name { font-size: .83rem; }
+  .landing-nav { padding: .8rem .9rem; }
+  .landing-nav .button { min-height: 2.45rem; padding: .55rem .8rem; font-size: .8rem; }
+  .hero-section { padding: 2rem .95rem 2.4rem; gap: 2.2rem; }
+  .hero-copy h1 { font-size: clamp(3.05rem, 14.2vw, 4.55rem); line-height: .86; letter-spacing: -.065em; }
+  .hero-copy > p { margin-top: 1.35rem; font-size: .96rem; line-height: 1.58; }
+  .hero-actions { margin-top: 1.4rem; }
+  .trust-row { margin-top: 1.1rem; }
+  .hero-console { padding: .9rem; border-radius: 1rem; }
+  .landing-steps { margin-bottom: 3rem; }
+  .landing-steps article { padding: 1.15rem; }
+  .modal-backdrop { padding: .65rem; align-items: end; }
+  .modal-card { width: 100%; max-height: 92vh; padding: 1.15rem; border-radius: 1rem 1rem .4rem .4rem; }
+  .modal-card h2 { padding-right: 2.25rem; font-size: 1.5rem; }
+  .stacked-form input, .stacked-form select, .stacked-form textarea { min-height: 3.15rem; font-size: 1rem; }
+  .workspace-content { padding-inline: .9rem; }
+  .page-heading h1 { font-size: 2.1rem; }
+  .garage-vehicle-details { padding: 1.15rem; }
+  .mobile-card-action { margin: 0 1.15rem 1.15rem; width: calc(100% - 2.3rem); }
+  .part-card { padding: 1rem; min-height: auto; }
+  .build-total-block { padding: 1.25rem; }
   .brand-mark { width: 2.1rem; height: 2.1rem; }
   .hero-actions { display: grid; }
   .hero-actions .button { width: 100%; }
