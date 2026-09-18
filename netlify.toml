@@ -1,2 +1,3 @@
 [build]
-  publish = "static-beta"
+  command = "pnpm build"
+  publish = ".next"
