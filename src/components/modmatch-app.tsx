@@ -167,6 +167,13 @@ export function ModMatchApp() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackBusy, setFeedbackBusy] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationBusy, setConfirmationBusy] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   const loadWorkspace = useCallback(async () => {
     setWorkspaceBusy(true);
@@ -207,19 +214,36 @@ export function ModMatchApp() {
 
   useEffect(() => {
     let mounted = true;
+    const returnedFromSignup =
+      window.location.hash.includes("type=signup") ||
+      new URLSearchParams(window.location.search).get("type") === "signup";
+    const returnedFromRecovery =
+      window.location.hash.includes("type=recovery") ||
+      new URLSearchParams(window.location.search).get("reset") === "1";
 
     void supabase.auth.getUser().then(({ data }) => {
       if (!mounted) return;
       if (data.user) {
         setUser({ id: data.user.id, email: data.user.email ?? "" });
         void loadWorkspace();
+        if (returnedFromSignup) {
+          setNotice("Email confirmed — welcome to ModMatch Auto.");
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+        if (returnedFromRecovery) {
+          setResetOpen(true);
+        }
       }
       setAuthReady(true);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       const nextUser = session?.user;
       setUser(nextUser ? { id: nextUser.id, email: nextUser.email ?? "" } : null);
+      if (event === "PASSWORD_RECOVERY") {
+        setResetMessage("");
+        setResetOpen(true);
+      }
       if (nextUser) void loadWorkspace();
       else {
         setVehicles([]);
@@ -287,7 +311,10 @@ export function ModMatchApp() {
       });
       if (error) setAuthMessage(error.message);
       else if (!data.session) {
-        setAuthMessage("Check your email to confirm your account, then sign in.");
+        setPendingEmail(email);
+        setAuthOpen(false);
+        setConfirmationMessage("");
+        setConfirmationOpen(true);
       } else {
         setAuthOpen(false);
         setNotice("Welcome to ModMatch Auto.");
@@ -301,6 +328,72 @@ export function ModMatchApp() {
       }
     }
     setAuthBusy(false);
+  }
+
+  async function resendConfirmation() {
+    if (!pendingEmail) return;
+    setConfirmationBusy(true);
+    setConfirmationMessage("");
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: pendingEmail,
+      options: { emailRedirectTo: "https://modmatchauto.com" },
+    });
+    setConfirmationMessage(
+      error
+        ? error.message
+        : "Confirmation email resent. Check your inbox and spam folder.",
+    );
+    setConfirmationBusy(false);
+  }
+
+  async function requestPasswordReset(email: string) {
+    if (!email) {
+      setAuthMessage("Enter your email address first, then tap Forgot password.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthMessage("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://modmatchauto.com?reset=1",
+    });
+    setAuthMessage(
+      error
+        ? error.message
+        : "Password reset email sent. Check your inbox and spam folder.",
+    );
+    setAuthBusy(false);
+  }
+
+  async function submitNewPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResetBusy(true);
+    setResetMessage("");
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    const confirmPassword = String(form.get("confirmPassword") ?? "");
+
+    if (password.length < 8) {
+      setResetMessage("Use at least 8 characters.");
+      setResetBusy(false);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setResetMessage("The passwords do not match.");
+      setResetBusy(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setResetMessage(error.message);
+    } else {
+      setResetOpen(false);
+      setResetMessage("");
+      window.history.replaceState({}, "", window.location.pathname);
+      setNotice("Password updated successfully.");
+    }
+    setResetBusy(false);
   }
 
   async function signOut() {
@@ -468,6 +561,19 @@ export function ModMatchApp() {
     );
   }
 
+  if (resetOpen) {
+    return (
+      <main className="landing-shell auth-return-shell">
+        <PasswordResetModal
+          busy={resetBusy}
+          message={resetMessage}
+          onSubmit={submitNewPassword}
+          onClose={() => setResetOpen(false)}
+        />
+      </main>
+    );
+  }
+
   if (!user) {
     return (
       <main className="landing-shell">
@@ -552,7 +658,21 @@ export function ModMatchApp() {
             message={authMessage}
             onClose={() => setAuthOpen(false)}
             onModeChange={(mode) => { setAuthMode(mode); setAuthMessage(""); }}
+            onForgotPassword={requestPasswordReset}
             onSubmit={submitAuth}
+          />
+        )}
+        {confirmationOpen && (
+          <ConfirmationModal
+            email={pendingEmail}
+            busy={confirmationBusy}
+            message={confirmationMessage}
+            onResend={resendConfirmation}
+            onSignIn={() => {
+              setConfirmationOpen(false);
+              openAuth("signin");
+            }}
+            onClose={() => setConfirmationOpen(false)}
           />
         )}
         <button className="feedback-trigger" onClick={() => { setFeedbackMessage(""); setFeedbackOpen(true); }}>
@@ -710,8 +830,145 @@ function ModalShell({ title, eyebrow, onClose, children }: { title: string; eyeb
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="modal-card" role="dialog" aria-modal="true" aria-label={title}><button className="icon-button modal-close" aria-label="Close" onClick={onClose}><X size={20} /></button><span className="micro-label">{eyebrow}</span><h2>{title}</h2>{children}</section></div>;
 }
 
-function AuthModal({ mode, busy, message, onClose, onModeChange, onSubmit }: { mode: AuthMode; busy: boolean; message: string; onClose: () => void; onModeChange: (mode: AuthMode) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
-  return <ModalShell title={mode === "signup" ? "Create your garage" : "Welcome back"} eyebrow={mode === "signup" ? "START BUILDING" : "SIGN IN"} onClose={onClose}><form className="stacked-form" onSubmit={onSubmit}>{mode === "signup" && <label><span>YOUR NAME</span><input name="fullName" autoComplete="name" required placeholder="Hugo Rodriguez" /></label>}<label><span>EMAIL</span><input name="email" type="email" autoComplete="email" required placeholder="you@example.com" /></label><label><span>PASSWORD</span><input name="password" type="password" minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} required placeholder="8+ characters" /></label>{message && <p className="form-message">{message}</p>}<button className="button button-primary button-full" disabled={busy}>{busy ? "Working…" : mode === "signup" ? "Create free account" : "Sign in"}<ArrowRight size={17} /></button></form><p className="modal-switch">{mode === "signup" ? "Already have an account?" : "New to ModMatch Auto?"}<button onClick={() => onModeChange(mode === "signup" ? "signin" : "signup")}>{mode === "signup" ? "Sign in" : "Create account"}</button></p></ModalShell>;
+function AuthModal({
+  mode,
+  busy,
+  message,
+  onClose,
+  onModeChange,
+  onForgotPassword,
+  onSubmit,
+}: {
+  mode: AuthMode;
+  busy: boolean;
+  message: string;
+  onClose: () => void;
+  onModeChange: (mode: AuthMode) => void;
+  onForgotPassword: (email: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <ModalShell
+      title={mode === "signup" ? "Create your garage" : "Welcome back"}
+      eyebrow={mode === "signup" ? "START BUILDING" : "SIGN IN"}
+      onClose={onClose}
+    >
+      <form className="stacked-form" onSubmit={onSubmit}>
+        {mode === "signup" && (
+          <label>
+            <span>YOUR NAME</span>
+            <input name="fullName" autoComplete="name" required placeholder="Your name" />
+          </label>
+        )}
+        <label>
+          <span>EMAIL</span>
+          <input name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+        </label>
+        <label>
+          <span>PASSWORD</span>
+          <input
+            name="password"
+            type="password"
+            minLength={8}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            required
+            placeholder="8+ characters"
+          />
+        </label>
+        {mode === "signin" && (
+          <button
+            type="button"
+            className="forgot-link"
+            onClick={(event) => {
+              const form = event.currentTarget.form;
+              if (!form) return;
+              const email = String(new FormData(form).get("email") ?? "").trim();
+              onForgotPassword(email);
+            }}
+          >
+            Forgot password?
+          </button>
+        )}
+        {message && <p className="form-message">{message}</p>}
+        <button className="button button-primary button-full" disabled={busy}>
+          {busy ? "Working…" : mode === "signup" ? "Create free account" : "Sign in"}
+          <ArrowRight size={17} />
+        </button>
+      </form>
+      <p className="modal-switch">
+        {mode === "signup" ? "Already have an account?" : "New to ModMatch Auto?"}
+        <button onClick={() => onModeChange(mode === "signup" ? "signin" : "signup")}>
+          {mode === "signup" ? "Sign in" : "Create account"}
+        </button>
+      </p>
+    </ModalShell>
+  );
+}
+
+function ConfirmationModal({
+  email,
+  busy,
+  message,
+  onResend,
+  onSignIn,
+  onClose,
+}: {
+  email: string;
+  busy: boolean;
+  message: string;
+  onResend: () => void;
+  onSignIn: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <ModalShell title="Check your email" eyebrow="ONE LAST STEP" onClose={onClose}>
+      <div className="confirmation-copy">
+        <p>We sent a confirmation link to:</p>
+        <strong className="confirmation-email">{email}</strong>
+        <p>Tap the link in that email to activate your ModMatch Auto garage.</p>
+        <div className="confirmation-actions">
+          <button className="button button-secondary button-full" disabled={busy} onClick={onResend}>
+            {busy ? "Resending…" : "Resend confirmation email"}
+          </button>
+          <button className="text-button confirmation-signin" onClick={onSignIn}>
+            Already confirmed? Sign in
+          </button>
+        </div>
+        {message && <p className="form-message">{message}</p>}
+      </div>
+    </ModalShell>
+  );
+}
+
+function PasswordResetModal({
+  busy,
+  message,
+  onSubmit,
+  onClose,
+}: {
+  busy: boolean;
+  message: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onClose: () => void;
+}) {
+  return (
+    <ModalShell title="Choose a new password" eyebrow="ACCOUNT RECOVERY" onClose={onClose}>
+      <form className="stacked-form" onSubmit={onSubmit}>
+        <label>
+          <span>NEW PASSWORD</span>
+          <input name="password" type="password" minLength={8} autoComplete="new-password" required placeholder="8+ characters" />
+        </label>
+        <label>
+          <span>CONFIRM PASSWORD</span>
+          <input name="confirmPassword" type="password" minLength={8} autoComplete="new-password" required placeholder="Repeat your password" />
+        </label>
+        {message && <p className="form-message">{message}</p>}
+        <button className="button button-primary button-full" disabled={busy}>
+          {busy ? "Updating…" : "Update password"}
+        </button>
+      </form>
+    </ModalShell>
+  );
 }
 
 function VehicleModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
