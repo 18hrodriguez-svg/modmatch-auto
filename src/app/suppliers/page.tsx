@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CarFront, CheckCircle2, CircleAlert, Database, FileSpreadsheet, Lock, PackageSearch, Plus, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CarFront, CircleAlert, FileSpreadsheet, Lock, PackageSearch, Plus, Search, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type SupplierStatus = "prospect" | "contacted" | "applied" | "pending" | "approved" | "declined";
